@@ -44,10 +44,10 @@ def save_processed_posts(processed: set):
     except Exception as e:
         logger.error(f"Failed to save ledger file: {e}")
 
-def get_viral_story() -> dict | None:
+def get_viral_stories(limit: int = 5) -> list[dict]:
     """
-    Randomly selects a subreddit, fetches the top posts of the day using Reddit's JSON endpoint,
-    filters for >2000 upvotes and unprocessed posts, and returns the selected post data.
+    Randomly selects subreddits, fetches the top posts of the day using Reddit's JSON endpoint,
+    filters for >2000 upvotes and unprocessed posts, and returns up to `limit` posts.
     """
     random.shuffle(SUBREDDITS)
     processed_ids = get_processed_posts()
@@ -57,7 +57,12 @@ def get_viral_story() -> dict | None:
         "User-Agent": "python:yt-shorts-bot:v1.0 (by /u/Severus2405)"
     }
 
+    found_posts = []
+
     for subreddit in SUBREDDITS:
+        if len(found_posts) >= limit:
+            break
+            
         logger.info(f"Checking subreddit: r/{subreddit}")
         url = f"https://old.reddit.com/r/{subreddit}/top.json?limit=25&t=day"
         
@@ -70,6 +75,9 @@ def get_viral_story() -> dict | None:
             posts = data.get('data', {}).get('children', [])
             
             for post in posts:
+                if len(found_posts) >= limit:
+                    break
+                    
                 post_data = post.get('data', {})
                 post_id = post_data.get('id')
                 score = post_data.get('score', 0)
@@ -93,31 +101,33 @@ def get_viral_story() -> dict | None:
                 processed_ids.add(post_id)
                 save_processed_posts(processed_ids)
                 
-                return {
+                found_posts.append({
                     "id": post_id,
                     "title": title,
                     "selftext": selftext,
                     "subreddit": subreddit,
                     "score": score
-                }
+                })
                 
         except requests.exceptions.RequestException as e:
             logger.warning(f"Error fetching data from r/{subreddit}: {e}")
         except json.JSONDecodeError:
             logger.warning(f"Failed to parse JSON response from r/{subreddit}")
 
-    logger.warning("No suitable viral posts found in any of the targeted subreddits.")
-    return None
+    if not found_posts:
+        logger.warning("No suitable viral posts found in any of the targeted subreddits.")
+    
+    return found_posts
 
 # Wrapper to maintain compatibility with main.py's expected interface
-def scrape_reddit_post() -> dict | None:
-    story = get_viral_story()
-    if story:
-        return {
+def scrape_reddit_posts(limit: int = 5) -> list[dict]:
+    stories = get_viral_stories(limit=limit)
+    return [
+        {
             "id": story["id"],
             "title": story["title"],
             "text": story["selftext"], # Map selftext to text for compatibility
             "subreddit": story["subreddit"],
             "score": story["score"]
-        }
-    return None
+        } for story in stories
+    ]
