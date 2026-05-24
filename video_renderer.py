@@ -1,7 +1,7 @@
 import os
 import random
 import logging
-from moviepy.editor import VideoFileClip, AudioFileClip, TextClip, CompositeVideoClip
+from moviepy import VideoFileClip, AudioFileClip, TextClip, CompositeVideoClip
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +28,25 @@ def create_video(audio_path: str, transcript_chunks: list[dict], bg_path: str = 
             start_time = random.uniform(0, max_start)
             
         logger.info(f"Slicing background video from {start_time:.2f}s to {start_time + audio_duration:.2f}s")
-        video_clip = bg_clip.subclip(start_time, start_time + audio_duration)
-        video_clip = video_clip.set_audio(audio_clip)
+        video_clip = bg_clip.subclipped(start_time, start_time + audio_duration)
+        
+        # 1. Force Vertical 9:16 Aspect Ratio
+        w, h = video_clip.w, video_clip.h
+        target_ratio = 9 / 16
+        
+        if w / h > target_ratio:
+            # Video is wider than 9:16 (e.g. 16:9), crop the width
+            new_w = int(h * target_ratio)
+            video_clip = video_clip.cropped(width=new_w, height=h, x_center=w/2, y_center=h/2)
+        else:
+            # Video is taller than 9:16, crop the height
+            new_h = int(w / target_ratio)
+            video_clip = video_clip.cropped(width=w, height=new_h, x_center=w/2, y_center=h/2)
+            
+        # Ensure it is exactly 1080x1920
+        video_clip = video_clip.resized(width=1080, height=1920)
+        
+        video_clip = video_clip.with_audio(audio_clip)
         
         # Create text clips for each chunk
         text_clips = []
@@ -40,27 +57,28 @@ def create_video(audio_path: str, transcript_chunks: list[dict], bg_path: str = 
             end = chunk["end"]
             
             try:
-                # Need ImageMagick installed for this to work natively
                 txt_clip = TextClip(
-                    text,
-                    fontsize=80,
+                    text=text,
+                    font_size=80,
                     color='#FFE800', # Bright Yellow
-                    font='Impact', # Ensure this font is available, fallback is Arial-Black
+                    font='impact.ttf', # Windows built-in
                     stroke_color='black',
                     stroke_width=4,
                     method='caption',
-                    align='center',
-                    size=(video_clip.w * 0.8, None) # 80% of width to avoid edge spill
+                    text_align='center',
+                    size=(800, None), # Strict bounding box to prevent cropping
+                    margin=(20, 20) # Add margin to prevent Pillow descender/stroke clipping
                 )
                 
-                txt_clip = txt_clip.set_position(('center', 'center')).set_start(start).set_end(end)
+                # Position slightly above center to avoid YouTube Shorts UI overlays
+                txt_clip = txt_clip.with_position(('center', 'center')).with_start(start).with_end(end)
                 text_clips.append(txt_clip)
             except Exception as e:
-                logger.warning(f"Error creating text clip for '{text}': {e}. Ensure ImageMagick is installed.")
+                logger.warning(f"Error creating text clip for '{text}': {e}")
                 # Fallback simple text clip if stroke/font fails
                 try:
-                    txt_clip = TextClip(text, fontsize=60, color='white')
-                    txt_clip = txt_clip.set_position(('center', 'center')).set_start(start).set_end(end)
+                    txt_clip = TextClip(text=text, font_size=60, color='white', font='arial.ttf')
+                    txt_clip = txt_clip.with_position(('center', 'center')).with_start(start).with_end(end)
                     text_clips.append(txt_clip)
                 except Exception as inner_e:
                      logger.error(f"Fallback TextClip failed: {inner_e}")
