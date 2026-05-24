@@ -22,6 +22,7 @@ from llm_processor import process_story
 from audio_generator import generate_audio
 from transcriber import transcribe_audio
 from video_renderer import create_video
+from uploader import upload_to_youtube
 
 def main():
     logger.info("=== Starting YouTube Shorts Automation Pipeline ===")
@@ -72,8 +73,22 @@ def main():
         success = create_video(audio_path, transcript_chunks, bg_path=bg_video)
         
         if success:
-            logger.info("=== Pipeline Completed Successfully! ===")
+            logger.info("=== Video Pipeline Completed Successfully! ===")
             logger.info(f"Final video saved as 'final_short.mp4'")
+            
+            # Step 6: Upload to YouTube
+            logger.info("STEP 6: Uploading to YouTube")
+            video_id = upload_to_youtube(
+                file_path="final_short.mp4",
+                title=script_data.youtube_title,
+                description=f"{post_data['title']}\n\n{script_data.script}",
+                tags=script_data.youtube_tags
+            )
+            
+            if video_id:
+                logger.info("=== Full Automation Pipeline Completed Successfully! ===")
+            else:
+                logger.error("Pipeline failed during YouTube upload.")
         else:
             logger.error("Pipeline failed during video rendering.")
 
