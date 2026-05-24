@@ -1,97 +1,123 @@
 import os
 import json
 import random
-import praw
 import logging
+import requests
 
 logger = logging.getLogger(__name__)
 
+# List of target subreddits
 SUBREDDITS = [
-    "AmItheAsshole",
     "TrueOffMyChest",
+    "AmItheAsshole",
     "tifu",
     "MaliciousCompliance",
     "pettyrevenge",
-    "entitledparents"
+    "creepyencounters",
+    "relationship_advice",
+    "aita",
+    "confessions",
+    "nosleep",
+    "antiwork",
+    "ProRevenge",
+    "NuclearRevenge"
 ]
 
 LEDGER_FILE = "processed_posts.json"
 
 def get_processed_posts() -> set:
+    """Reads the ledger file and returns a set of processed post IDs."""
     if os.path.exists(LEDGER_FILE):
         try:
-            with open(LEDGER_FILE, 'r') as f:
+            with open(LEDGER_FILE, 'r', encoding='utf-8') as f:
                 return set(json.load(f))
         except Exception as e:
             logger.warning(f"Failed to read ledger file: {e}")
             return set()
     return set()
 
-def update_processed_posts(post_id: str):
-    processed = get_processed_posts()
-    processed.add(post_id)
-    with open(LEDGER_FILE, 'w') as f:
-        json.write(f, list(processed))
-        
 def save_processed_posts(processed: set):
-    with open(LEDGER_FILE, 'w') as f:
-        json.dump(list(processed), f)
-
-def scrape_reddit_post() -> dict | None:
-    client_id = os.getenv("REDDIT_CLIENT_ID")
-    client_secret = os.getenv("REDDIT_SECRET")
-    user_agent = os.getenv("REDDIT_USER_AGENT", "reddit-content-bot:v1.0 (by /u/your_username)")
-
-    if not client_id or not client_secret:
-        logger.error("Reddit credentials are not set in the environment variables.")
-        return None
-
+    """Saves the set of processed post IDs to the ledger file."""
     try:
-        reddit = praw.Reddit(
-            client_id=client_id,
-            client_secret=client_secret,
-            user_agent=user_agent
-        )
+        with open(LEDGER_FILE, 'w', encoding='utf-8') as f:
+            json.dump(list(processed), f, indent=4)
     except Exception as e:
-        logger.error(f"Failed to initialize PRAW: {e}")
-        return None
+        logger.error(f"Failed to save ledger file: {e}")
 
+def get_viral_story() -> dict | None:
+    """
+    Randomly selects a subreddit, fetches the top posts of the day using Reddit's JSON endpoint,
+    filters for >2000 upvotes and unprocessed posts, and returns the selected post data.
+    """
     random.shuffle(SUBREDDITS)
     processed_ids = get_processed_posts()
+    
+    # Standard web browser User-Agent to prevent 429 Too Many Requests
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    }
 
-    for subreddit_name in SUBREDDITS:
-        logger.info(f"Checking subreddit: r/{subreddit_name}")
+    for subreddit in SUBREDDITS:
+        logger.info(f"Checking subreddit: r/{subreddit}")
+        url = f"https://www.reddit.com/r/{subreddit}/top.json?limit=25&t=day"
+        
         try:
-            subreddit = reddit.subreddit(subreddit_name)
-            # Fetch Top - Past 24 Hours
-            top_posts = subreddit.top(time_filter="day", limit=25)
+            # Fetch data from the public JSON endpoint
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()  # Raise an exception for bad status codes
             
-            for post in top_posts:
-                if post.score < 2000:
-                    continue
-                if post.id in processed_ids:
-                    continue
-                if post.over_18: # Avoid NSFW optionally? User didn't specify, but often a good idea for shorts. Actually, some of these subreddits have nsfw tags for text. I'll include them if not explicitly asked to exclude, just text.
-                    pass 
+            data = response.json()
+            posts = data.get('data', {}).get('children', [])
+            
+            for post in posts:
+                post_data = post.get('data', {})
+                post_id = post_data.get('id')
+                score = post_data.get('score', 0)
+                title = post_data.get('title', '')
+                selftext = post_data.get('selftext', '').strip()
                 
-                # We found a valid post!
-                # Ensure it has text
-                if not post.selftext.strip():
+                # Minimum of 2,000 upvotes
+                if score < 2000:
                     continue
-
-                processed_ids.add(post.id)
+                # Ensure the post has text content
+                if not selftext:
+                    continue
+                # Skip previously processed posts
+                if post_id in processed_ids:
+                    continue
+                    
+                # We found a valid post
+                logger.info(f"Selected post: '{title}' (Score: {score}, ID: {post_id})")
+                
+                # Update ledger to avoid processing this story again
+                processed_ids.add(post_id)
                 save_processed_posts(processed_ids)
                 
-                logger.info(f"Selected post: {post.title} (Score: {post.score}, ID: {post.id})")
                 return {
-                    "id": post.id,
-                    "title": post.title,
-                    "text": post.selftext,
-                    "subreddit": subreddit_name,
-                    "score": post.score
+                    "id": post_id,
+                    "title": title,
+                    "selftext": selftext,
+                    "subreddit": subreddit,
+                    "score": score
                 }
-        except Exception as e:
-            logger.warning(f"Error accessing r/{subreddit_name}: {e}")
+                
+        except requests.exceptions.RequestException as e:
+            logger.warning(f"Error fetching data from r/{subreddit}: {e}")
+        except json.JSONDecodeError:
+            logger.warning(f"Failed to parse JSON response from r/{subreddit}")
 
-    logger.warning("No suitable posts found in any of the targeted subreddits.")
+    logger.warning("No suitable viral posts found in any of the targeted subreddits.")
+    return None
+
+# Wrapper to maintain compatibility with main.py's expected interface
+def scrape_reddit_post() -> dict | None:
+    story = get_viral_story()
+    if story:
+        return {
+            "id": story["id"],
+            "title": story["title"],
+            "text": story["selftext"], # Map selftext to text for compatibility
+            "subreddit": story["subreddit"],
+            "score": story["score"]
+        }
     return None
