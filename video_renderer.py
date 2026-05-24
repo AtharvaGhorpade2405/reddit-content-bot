@@ -1,9 +1,42 @@
 import os
 import random
 import logging
-from moviepy import VideoFileClip, AudioFileClip, TextClip, CompositeVideoClip
+from moviepy import VideoFileClip, AudioFileClip, TextClip, CompositeVideoClip, ImageClip
+import numpy as np
+from PIL import Image, ImageDraw, ImageFont
 
 logger = logging.getLogger(__name__)
+
+def create_custom_text_clip(word: str, font_path: str, fontsize: int = 90) -> ImageClip:
+    if not os.path.exists(font_path):
+        raise FileNotFoundError(f"Font file not found: {font_path}")
+        
+    font = ImageFont.truetype(font_path, fontsize)
+    
+    # Create a transparent RGBA image large enough to prevent cropping
+    img = Image.new("RGBA", (800, 200), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    
+    # Get text bounding box to center it
+    left, top, right, bottom = draw.textbbox((0, 0), word, font=font)
+    text_width = right - left
+    text_height = bottom - top
+    
+    x = (img.width - text_width) / 2
+    y = (img.height - text_height) / 2
+    
+    # Draw with viral Shorts styling
+    draw.text(
+        (x, y), 
+        word, 
+        font=font, 
+        fill="white", 
+        stroke_width=5, 
+        stroke_fill="black"
+    )
+    
+    img_array = np.array(img)
+    return ImageClip(img_array)
 
 def create_video(audio_path: str, transcript_chunks: list[dict], bg_path: str = "background.mp4", output_path: str = "final_short.mp4"):
     logger.info(f"Rendering video using {bg_path} and {audio_path}")
@@ -56,28 +89,19 @@ def create_video(audio_path: str, transcript_chunks: list[dict], bg_path: str = 
             start = chunk["start"]
             end = chunk["end"]
             
+            font_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Montserrat-SemiBold.ttf")
+            
             try:
-                txt_clip = TextClip(
-                    text=text,
-                    font_size=80,
-                    color='#FFE800', # Bright Yellow
-                    font="Montserrat SemiBold", # Windows built-in
-                    stroke_color='black',
-                    stroke_width=4,
-                    method='caption',
-                    text_align='center',
-                    size=(800, None), # Strict bounding box to prevent cropping
-                    margin=(20, 20) # Add margin to prevent Pillow descender/stroke clipping
-                )
+                txt_clip = create_custom_text_clip(text, font_path, fontsize=90)
                 
                 # Position slightly above center to avoid YouTube Shorts UI overlays
                 txt_clip = txt_clip.with_position(('center', 'center')).with_start(start).with_end(end)
                 text_clips.append(txt_clip)
             except Exception as e:
-                logger.warning(f"Error creating text clip for '{text}': {e}")
-                # Fallback simple text clip if stroke/font fails
+                logger.warning(f"Error creating custom text clip for '{text}': {e}")
+                # Fallback simple text clip if custom renderer fails
                 try:
-                    txt_clip = TextClip(text=text, font_size=60, color='white', font="Montserrat SemiBold")
+                    txt_clip = TextClip(text=text, font_size=60, color='white')
                     txt_clip = txt_clip.with_position(('center', 'center')).with_start(start).with_end(end)
                     text_clips.append(txt_clip)
                 except Exception as inner_e:
