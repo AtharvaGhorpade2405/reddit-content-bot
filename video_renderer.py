@@ -80,7 +80,7 @@ def create_video(audio_path: str, transcript_chunks: list[dict], bg_path: str = 
                 logger.warning(f"Error creating text clip for '{text}': {e}")
                 # Fallback simple text clip if stroke/font fails
                 try:
-                    txt_clip = TextClip(text=text, font_size=60, color='white', font='arial.ttf')
+                    txt_clip = TextClip(text=text, font_size=60, color='white', font=font_path)
                     txt_clip = txt_clip.with_position(('center', 'center')).with_start(start).with_end(end)
                     text_clips.append(txt_clip)
                 except Exception as inner_e:
