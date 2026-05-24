@@ -55,16 +55,13 @@ def create_video(audio_path: str, transcript_chunks: list[dict], bg_path: str = 
             text = chunk["text"].upper()
             start = chunk["start"]
             end = chunk["end"]
-
-            BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-            font_path = os.path.join(BASE_DIR, "Montserrat-Black.ttf")
             
             try:
                 txt_clip = TextClip(
                     text=text,
                     font_size=80,
                     color='#FFE800', # Bright Yellow
-                    font=font_path, # Windows built-in
+                    font="Montserrat SemiBold", # Windows built-in
                     stroke_color='black',
                     stroke_width=4,
                     method='caption',
@@ -80,7 +77,7 @@ def create_video(audio_path: str, transcript_chunks: list[dict], bg_path: str = 
                 logger.warning(f"Error creating text clip for '{text}': {e}")
                 # Fallback simple text clip if stroke/font fails
                 try:
-                    txt_clip = TextClip(text=text, font_size=60, color='white', font=font_path)
+                    txt_clip = TextClip(text=text, font_size=60, color='white', font="Montserrat SemiBold")
                     txt_clip = txt_clip.with_position(('center', 'center')).with_start(start).with_end(end)
                     text_clips.append(txt_clip)
                 except Exception as inner_e:
