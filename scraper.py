@@ -54,7 +54,7 @@ def get_viral_story() -> dict | None:
     
     # Standard web browser User-Agent to prevent 429 Too Many Requests
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        "User-Agent": "python:yt-shorts-bot:v1.0 (by /u/Severus2405)"
     }
 
     for subreddit in SUBREDDITS:
