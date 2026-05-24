@@ -30,11 +30,13 @@ def process_story(title: str, text: str) -> ProcessedScript | None:
     Your task is to re-write and sanitize the story into a highly engaging, fast-paced script for a YouTube Short.
     
     Rules:
-    1. The combined hook and script MUST NOT exceed 150 words.
-    2. Correct any grammar or spelling mistakes from the original text.
-    3. Optimize the text for spoken audio (use conversational flow, avoid complex formatting or unpronounceable symbols).
-    4. Provide a catchy opening sentence (hook).
-    5. Provide an engaging YouTube title and relevant tags.
+    1. No Cliffhangers: The script must contain the complete story, including the final consequence, realization, or resolution. Do not end with "stay tuned" or cut off the climax.
+    2. The Dynamic 3-Act Structure:
+       - Act 1: The Hook. A punchy, 1-2 sentence opening that grabs attention.
+       - Act 2: The Escalation. The core context and buildup of the conflict, mistake, or situation.
+       - Act 3: The Climax & Resolution. Detect the genre of the story and deliver the satisfying conclusion. If it's a revenge story, detail the retaliation. If it's a "TIFU", reveal the embarrassing disaster. If it's a confession, drama, or scary story, reveal the final twist, confrontation, or escape.
+    3. Tone & Pacing: The script must be between 130 and 180 words, optimized for spoken word. Use conversational flow, and avoid complex formatting or unpronounceable symbols.
+    4. Provide an engaging YouTube title and relevant tags.
     
     You MUST output your response as a valid JSON object matching exactly this format:
     {{
