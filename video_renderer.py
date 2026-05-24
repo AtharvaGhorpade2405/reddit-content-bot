@@ -55,13 +55,16 @@ def create_video(audio_path: str, transcript_chunks: list[dict], bg_path: str = 
             text = chunk["text"].upper()
             start = chunk["start"]
             end = chunk["end"]
+
+            BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+            font_path = os.path.join(BASE_DIR, "Montserrat-Black.ttf")
             
             try:
                 txt_clip = TextClip(
                     text=text,
                     font_size=80,
                     color='#FFE800', # Bright Yellow
-                    font='impact.ttf', # Windows built-in
+                    font=font_path, # Windows built-in
                     stroke_color='black',
                     stroke_width=4,
                     method='caption',
