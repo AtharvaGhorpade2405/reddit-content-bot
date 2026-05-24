@@ -1,0 +1,71 @@
+import os
+import json
+import logging
+from typing import List
+from pydantic import BaseModel, Field
+from groq import Groq
+
+logger = logging.getLogger(__name__)
+
+class ProcessedScript(BaseModel):
+    hook: str = Field(description="A catchy opening sentence to hook the viewer.")
+    script: str = Field(description="The cleaned, grammar-corrected story optimized for spoken audio, MAXIMUM 150 words.")
+    youtube_title: str = Field(description="An engaging title for the final YouTube Short.")
+    youtube_tags: List[str] = Field(description="A list of relevant hashtag strings without the # symbol.")
+
+def process_story(title: str, text: str) -> ProcessedScript | None:
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        logger.error("GROQ_API_KEY is not set in environment variables.")
+        return None
+
+    try:
+        client = Groq(api_key=api_key)
+    except Exception as e:
+        logger.error(f"Failed to initialize Groq client: {e}")
+        return None
+
+    prompt = f"""
+    You are an expert content creator for YouTube Shorts. I will give you a Reddit post's title and text.
+    Your task is to re-write and sanitize the story into a highly engaging, fast-paced script for a YouTube Short.
+    
+    Rules:
+    1. The combined hook and script MUST NOT exceed 150 words.
+    2. Correct any grammar or spelling mistakes from the original text.
+    3. Optimize the text for spoken audio (use conversational flow, avoid complex formatting or unpronounceable symbols).
+    4. Provide a catchy opening sentence (hook).
+    5. Provide an engaging YouTube title and relevant tags.
+    
+    Original Title: {title}
+    Original Text: {text}
+    """
+
+    try:
+        logger.info("Sending text to Groq for processing...")
+        chat_completion = client.chat.completions.create(
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a helpful assistant that outputs JSON matching the requested schema."
+                },
+                {
+                    "role": "user",
+                    "content": prompt,
+                }
+            ],
+            model="llama3-8b-8192",
+            temperature=0.7,
+            # Using tools/function calling or JSON mode to enforce Pydantic schema
+            response_format={"type": "json_object"},
+        )
+        
+        response_content = chat_completion.choices[0].message.content
+        logger.info("Received response from Groq. Validating schema...")
+        
+        # Pydantic validation
+        result = ProcessedScript.model_validate_json(response_content)
+        return result
+
+    except Exception as e:
+        logger.error(f"Error processing story with Groq: {e}")
+        return None
