@@ -1,4 +1,5 @@
 import os
+import textwrap
 import random
 import logging
 from moviepy import VideoFileClip, AudioFileClip, TextClip, CompositeVideoClip, ImageClip
@@ -13,26 +14,38 @@ def create_custom_text_clip(word: str, font_path: str, fontsize: int = 90) -> Im
         
     font = ImageFont.truetype(font_path, fontsize)
     
-    # Create a transparent RGBA image large enough to prevent cropping
-    img = Image.new("RGBA", (800, 200), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
+    # 1. Smart Word Wrapping
+    if len(word) > 15 and " " in word:
+        word = "\n".join(textwrap.wrap(word, width=max(15, len(word)//2 + 1)))
+        
+    # 2. Dynamic Canvas Sizing
+    dummy_img = Image.new("RGBA", (1, 1), (0, 0, 0, 0))
+    dummy_draw = ImageDraw.Draw(dummy_img)
     
-    # Get text bounding box to center it
-    left, top, right, bottom = draw.textbbox((0, 0), word, font=font)
+    left, top, right, bottom = dummy_draw.textbbox((0, 0), word, font=font)
     text_width = right - left
     text_height = bottom - top
     
-    x = (img.width - text_width) / 2
-    y = (img.height - text_height) / 2
+    # 3. Padding
+    canvas_w = text_width + 100
+    canvas_h = text_height + 100
     
-    # Draw with viral Shorts styling
+    img = Image.new("RGBA", (canvas_w, canvas_h), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    
+    # 4. Centered Drawing
+    x = canvas_w / 2
+    y = canvas_h / 2
+    
     draw.text(
         (x, y), 
         word, 
         font=font, 
         fill="white", 
         stroke_width=5, 
-        stroke_fill="black"
+        stroke_fill="black",
+        align="center",
+        anchor="mm"
     )
     
     img_array = np.array(img)
