@@ -59,7 +59,7 @@ def get_viral_story() -> dict | None:
 
     for subreddit in SUBREDDITS:
         logger.info(f"Checking subreddit: r/{subreddit}")
-        url = f"https://www.reddit.com/r/{subreddit}/top.json?limit=25&t=day"
+        url = f"https://old.reddit.com/r/{subreddit}/top.json?limit=25&t=day"
         
         try:
             # Fetch data from the public JSON endpoint
