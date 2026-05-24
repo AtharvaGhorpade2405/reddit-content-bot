@@ -1,0 +1,15 @@
+[project]
+name = "reddit-content-bot"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "edge-tts>=7.2.8",
+    "faster-whisper>=1.2.1",
+    "groq>=1.2.0",
+    "moviepy>=2.2.1",
+    "praw>=7.8.1",
+    "pydantic>=2.13.4",
+    "python-dotenv>=1.2.2",
+]

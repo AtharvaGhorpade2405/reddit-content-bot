@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+processed_posts.json
+voiceover.mp3
+final_short.mp4
+background.mp4
