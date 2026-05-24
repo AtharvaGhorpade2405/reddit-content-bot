@@ -8,3 +8,5 @@ final_short.mp4
 background.mp4
 client_secret.json
 token.json
+feeder.log
+pipeline.log
