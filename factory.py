@@ -41,13 +41,12 @@ def save_queue(queue: list[dict]):
 def push_queue_to_git():
     logger.info("Syncing queue.json to GitHub...")
     try:
-        # Before pushing, pull just in case the feeder pushed recently
-        # to avoid merge conflicts on the VPS
-        subprocess.run(["git", "pull"], check=True)
+        subprocess.run(["git", "config", "pull.rebase", "true"], check=True)
         subprocess.run(["git", "add", QUEUE_FILE], check=True)
         res = subprocess.run(["git", "commit", "-m", "chore: Auto-update queue from factory"], capture_output=True)
         if res.returncode == 0:
-            subprocess.run(["git", "push"], check=True)
+            subprocess.run(["git", "pull", "origin", "main"], check=True)
+            subprocess.run(["git", "push", "origin", "main"], check=True)
             logger.info("Successfully synced queue to GitHub.")
         else:
             logger.info("No changes to commit for queue.json.")

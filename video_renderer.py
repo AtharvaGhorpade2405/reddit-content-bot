@@ -15,8 +15,8 @@ def create_custom_text_clip(word: str, font_path: str, fontsize: int = 90) -> Im
     font = ImageFont.truetype(font_path, fontsize)
     
     # 1. Smart Word Wrapping
-    if len(word) > 15 and " " in word:
-        word = "\n".join(textwrap.wrap(word, width=max(15, len(word)//2 + 1)))
+    # Enforce strict 14-character width limit to prevent horizontal cropping
+    word = textwrap.fill(word, width=14)
         
     # 2. Dynamic Canvas Sizing
     dummy_img = Image.new("RGBA", (1, 1), (0, 0, 0, 0))
