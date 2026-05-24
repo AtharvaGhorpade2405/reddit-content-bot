@@ -36,6 +36,14 @@ def process_story(title: str, text: str) -> ProcessedScript | None:
     4. Provide a catchy opening sentence (hook).
     5. Provide an engaging YouTube title and relevant tags.
     
+    You MUST output your response as a valid JSON object matching exactly this format:
+    {{
+      "hook": "Your catchy opening sentence here.",
+      "script": "The rest of your story script here.",
+      "youtube_title": "Your Engaging Title Here",
+      "youtube_tags": ["tag1", "tag2", "tag3"]
+    }}
+    
     Original Title: {title}
     Original Text: {text}
     """
@@ -53,7 +61,7 @@ def process_story(title: str, text: str) -> ProcessedScript | None:
                     "content": prompt,
                 }
             ],
-            model="llama3-8b-8192",
+            model="llama-3.1-8b-instant",
             temperature=0.7,
             # Using tools/function calling or JSON mode to enforce Pydantic schema
             response_format={"type": "json_object"},
