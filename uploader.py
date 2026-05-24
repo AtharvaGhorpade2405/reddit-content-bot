@@ -88,7 +88,7 @@ def upload_to_youtube(file_path: str, title: str, description: str, tags: list[s
             },
             "status": {
                 # CHANGE THIS TO "public" WHEN READY FOR PRODUCTION DEPLOYMENT
-                "privacyStatus": "private", 
+                "privacyStatus": "public", 
                 "selfDeclaredMadeForKids": False
             }
         }
